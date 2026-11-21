@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ORCA-2 — Track Changes as a Covert Channel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Georgia:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper:    #FAFAF8;
+  --paper2:   #F0EEE9;
+  --rule:     #DDD9D0;
+  --corp-txt: #2C2C2C;
+  --corp-mut: #6B7280;
+  --corp-acc: #0F3460;
+
+  --dark-bg:  #0E1420;
+  --dark-s1:  #161E2E;
+  --dark-s2:  #1C2740;
+  --dark-brd: #263450;
+  --dark-txt: #C8D3E8;
+  --dark-mut: #6B7F9E;
+
+  --red:      #E94560;
+  --purple:   #9B6DFF;
+  --green:    #0F9B58;
+  --green-b:  #0CCE6B;
+  --amber:    #F5A623;
+  --blue:     #4A9EFF;
+
+  --serif: Georgia, 'Times New Roman', serif;
+  --mono:  'JetBrains Mono', 'Cascadia Code', monospace;
+}
+
+@media (prefers-color-scheme: dark) { :root { color-scheme: light dark; } }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--corp-txt);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 6rem;
+}
+
+/* ══════════════════════════════════════
+   PRESS RELEASE SECTION (top / light)
+══════════════════════════════════════ */
+
+.pr-section {
+  background: var(--paper);
+  padding: 3rem 1.5rem 2.5rem;
+}
+
+.pr-wrap {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.pr-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--corp-mut);
+  border: 1px solid var(--rule);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 2px;
+  margin-bottom: 2rem;
+}
+
+.pr-label .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.pr-dateline {
+  font-family: var(--serif);
+  font-size: 0.82rem;
+  color: var(--corp-mut);
+  margin-bottom: 1rem;
+  letter-spacing: 0.03em;
+}
+
+.pr-headline {
+  font-family: var(--serif);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--corp-txt);
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid var(--corp-acc);
+  padding-bottom: 1rem;
+}
+
+.pr-subhead {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--corp-mut);
+  margin-bottom: 2rem;
+}
+
+.pr-body p {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--corp-txt);
+  margin-bottom: 1.1rem;
+  max-width: 68ch;
+}
+
+/* The "clean" annotation hints */
+.pr-annotation {
+  display: inline;
+  position: relative;
+  cursor: default;
+}
+
+.pr-annotation sup {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--red);
+  font-weight: 700;
+  margin-left: 1px;
+}
+
+/* Word-style comment bubble (hover) */
+.pr-annotation:hover .bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.bubble {
+  display: none; /* simplified for static */
+}
+
+/* Clean doc footer */
+.pr-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--serif);
+  font-size: 0.78rem;
+  color: var(--corp-mut);
+}
+
+/* ══════════════════════════════════════
+   TRANSITION BAND
+══════════════════════════════════════ */
+.peel {
+  position: relative;
+  height: 80px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--dark-bg) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.peel-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--dark-mut);
+  z-index: 1;
+}
+
+.peel-line {
+  flex: 1;
+  max-width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--dark-brd));
+}
+
+.peel-line.r {
+  background: linear-gradient(90deg, var(--dark-brd), transparent);
+}
+
+/* ══════════════════════════════════════
+   FORENSIC SECTION (dark)
+══════════════════════════════════════ */
+.forensic {
+  background: var(--dark-bg);
+  color: var(--dark-txt);
+  padding: 0 1.5rem 4rem;
+}
+
+.f-wrap {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* Section headers */
+.f-section {
+  margin-bottom: 3.5rem;
+  padding-top: 3rem;
+}
+
+.f-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--dark-brd);
+}
+
+.f-badge {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--dark-mut);
+  background: var(--dark-s1);
+  border: 1px solid var(--dark-brd);
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+}
+
+.f-section-head h2 {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #E0E8F8;
+}
+
+.f-p {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--dark-txt);
+  max-width: 68ch;
+  margin-bottom: 1rem;
+}
+
+/* Flag reveal */
+.flag-reveal {
+  background: linear-gradient(135deg, #071A0F, #031208);
+  border: 1px solid rgba(12,206,107,0.4);
+  border-radius: 8px;
+  padding: 2rem 2rem;
+  margin: 2rem 0 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.flag-reveal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(12,206,107,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.flag-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  color: rgba(12,206,107,0.6);
+  margin-bottom: 0.6rem;
+}
+
+.flag-value {
+  font-family: var(--mono);
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+  font-weight: 700;
+  color: var(--green-b);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* How it was hidden — two-col explainer */
+.hidden-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 600px) { .hidden-grid { grid-template-columns: 1fr; } }
+
+.hidden-card {
+  background: var(--dark-s1);
+  border: 1px solid var(--dark-brd);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hc-head {
+  background: var(--dark-s2);
+  border-bottom: 1px solid var(--dark-brd);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hc-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hc-icon.del {
+  background: rgba(155,109,255,0.15);
+  color: var(--purple);
+  border: 1px solid rgba(155,109,255,0.35);
+}
+
+.hc-icon.cmt {
+  background: rgba(74,158,255,0.15);
+  color: var(--blue);
+  border: 1px solid rgba(74,158,255,0.35);
+}
+
+.hc-title {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #E0E8F8;
+}
+
+.hc-body {
+  padding: 1rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--dark-txt);
+}
+
+.hc-xml {
+  background: var(--dark-bg);
+  border: 1px solid var(--dark-brd);
+  border-radius: 4px;
+  padding: 0.65rem 0.8rem;
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.xml-tag  { color: #4A9EFF; }
+.xml-attr { color: #9B6DFF; }
+.xml-val  { color: #F5A623; }
+.xml-txt  { color: #0CCE6B; font-weight: 700; }
+.xml-mut  { color: var(--dark-mut); }
+
+/* ══ TIMELINE ══════════════════════════ */
+.timeline {
+  margin: 2rem 0;
+  position: relative;
+}
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 7rem 20px 1fr;
+  align-items: start;
+  gap: 0;
+  min-height: 60px;
+}
+
+.tl-time {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--dark-mut);
+  text-align: right;
+  padding: 0.4rem 0.9rem 0 0;
+  line-height: 1.4;
+}
+
+.tl-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tl-node {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.tl-node.del-node  {
+  background: var(--purple);
+  box-shadow: 0 0 8px rgba(155,109,255,0.5);
+}
+
+.tl-node.cmt-node  {
+  background: var(--blue);
+  box-shadow: 0 0 8px rgba(74,158,255,0.5);
+}
+
+.tl-node.final-node {
+  width: 16px; height: 16px;
+  background: var(--green-b);
+  box-shadow: 0 0 12px rgba(12,206,107,0.6);
+  margin-top: 0.1rem;
+}
+
+.tl-line {
+  width: 1px;
+  flex: 1;
+  min-height: 2rem;
+  background: var(--dark-brd);
+}
+
+.tl-row:last-child .tl-line { display: none; }
+
+.tl-content {
+  padding: 0.2rem 0 1.2rem 1rem;
+}
+
+.tl-frag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+}
+
+.tl-type {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.type-del {
+  background: rgba(155,109,255,0.12);
+  color: var(--purple);
+  border: 1px solid rgba(155,109,255,0.3);
+}
+
+.type-cmt {
+  background: rgba(74,158,255,0.12);
+  color: var(--blue);
+  border: 1px solid rgba(74,158,255,0.3);
+}
+
+.tl-frag {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.frag-del { color: var(--purple); }
+.frag-cmt { color: var(--blue); }
+
+.tl-loc {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--dark-mut);
+}
+
+/* Running assembly bar */
+.assembly-bar {
+  background: var(--dark-s2);
+  border: 1px solid var(--dark-brd);
+  border-radius: 4px;
+  padding: 0.5rem 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.asm-label {
+  color: var(--dark-mut);
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.asm-so-far { color: var(--dark-txt); word-break: break-all; }
+.asm-new    { color: var(--green-b); font-weight: 700; }
+
+/* Final assembly */
+.assembly-final {
+  background: var(--dark-s1);
+  border: 1px solid var(--dark-brd);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.af-head {
+  background: var(--dark-s2);
+  border-bottom: 1px solid var(--dark-brd);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--dark-mut);
+}
+
+.af-body {
+  padding: 1.2rem 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.frag-chip {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.chip-del {
+  background: rgba(155,109,255,0.12);
+  color: var(--purple);
+  border: 1px solid rgba(155,109,255,0.25);
+}
+
+.chip-cmt {
+  background: rgba(74,158,255,0.12);
+  color: var(--blue);
+  border: 1px solid rgba(74,158,255,0.25);
+}
+
+.chip-eq {
+  color: var(--dark-mut);
+  font-size: 1rem;
+}
+
+.chip-result {
+  background: rgba(12,206,107,0.1);
+  color: var(--green-b);
+  border: 1px solid rgba(12,206,107,0.3);
+  font-size: 0.9rem;
+}
+
+/* Reviewer table */
+.reviewer-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.5rem 0;
+}
+
+.rev-row {
+  display: grid;
+  grid-template-columns: 11rem auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  background: var(--dark-s1);
+  border: 1px solid var(--dark-brd);
+  border-radius: 4px;
+  padding: 0.65rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.rev-row.dana {
+  background: rgba(233,69,96,0.05);
+  border-color: rgba(233,69,96,0.3);
+}
+
+.rev-name { color: #E0E8F8; font-weight: 500; }
+.rev-name.dana-name { color: var(--red); }
+
+.rev-count {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.count-sus {
+  background: rgba(233,69,96,0.12);
+  color: var(--red);
+  border: 1px solid rgba(233,69,96,0.3);
+}
+
+.count-legit {
+  background: var(--dark-s2);
+  color: var(--dark-mut);
+  border: 1px solid var(--dark-brd);
+}
+
+.rev-note { font-size: 0.75rem; color: var(--dark-mut); }
+
+/* Fix panel */
+.fix-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+}
+
+.fix-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  background: var(--dark-s1);
+  border: 1px solid var(--dark-brd);
+  border-radius: 5px;
+  padding: 0.9rem 1rem;
+}
+
+.fix-num {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--dark-mut);
+  background: var(--dark-s2);
+  border: 1px solid var(--dark-brd);
+  border-radius: 3px;
+  padding: 0.2rem 0.5rem;
+  margin-top: 0.1rem;
+  white-space: nowrap;
+}
+
+.fix-title {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #E0E8F8;
+  margin-bottom: 0.3rem;
+}
+
+.fix-desc {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--dark-mut);
+  line-height: 1.6;
+}
+
+/* Footer */
+.f-footer {
+  border-top: 1px solid var(--dark-brd);
+  padding-top: 2rem;
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--dark-mut);
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     PRESS RELEASE — what Word showed you
+══════════════════════════════════════ -->
+<div class="pr-section">
+  <div class="pr-wrap">
+    <div class="pr-label"><div class="dot"></div>WHAT WORD SHOWED YOU · "CLEANED UP" VIEW</div>
+
+    <p class="pr-dateline">FOR IMMEDIATE RELEASE — BOSTON, November 4, 2026</p>
+
+    <h1 class="pr-headline">Corvane Biotherapeutics Reports Positive Topline Results from Phase II ORCA-2 Trial of CVB-114 in Refractory Atopic Dermatitis</h1>
+    <p class="pr-subhead">Primary endpoint met with statistical significance; company to request End-of-Phase II meeting with FDA</p>
+
+    <div class="pr-body">
+      <p>Corvane Biotherapeutics, Inc. (Nasdaq: CRVB), a clinical-stage company developing oral immunology therapies, today announced topline results from ORCA-2, a randomized, double-blind, placebo-controlled Phase II trial of CVB-114 in adults with moderate-to-severe atopic dermatitis who had an inadequate response to prior systemic therapy.</p>
+
+      <p>At week 16, 58.4% of patients receiving CVB-114 200 mg once daily achieved EASI-75, compared with 21.7% of patients receiving placebo (p&lt;0.001). The key secondary endpoint, vIGA-AD 0/1 at week 16, was also met.</p>
+
+      <p>CVB-114 was generally well tolerated. The most common adverse events were nasopharyngitis, headache and nausea, the majority of which were mild. Discontinuations due to adverse events were 3.8% in the CVB-114 arm and 3.2% in the placebo arm.</p>
+
+      <p>Corvane plans to present full results at an upcoming medical meeting and will request an End-of-Phase II meeting with the U.S. Food and Drug Administration in the first half of 2027.</p>
+    </div>
+
+    <div class="pr-footer">
+      Media: press@corvane-bio.example &nbsp;·&nbsp; Investor: ir@corvane-bio.example &nbsp;·&nbsp; Nasdaq: CRVB
+    </div>
+  </div>
+</div>
+
+<!-- PEEL TRANSITION -->
+<div class="peel">
+  <div class="peel-line"></div>
+  <span class="peel-label">UNZIP · PARSE XML · REVEAL HIDDEN LAYER</span>
+  <div class="peel-line r"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     FORENSIC SECTION
+══════════════════════════════════════ -->
+<div class="forensic">
+<div class="f-wrap">
+
+  <!-- FLAG -->
+  <div class="flag-reveal">
+    <div class="flag-eyebrow">FLAG RECOVERED · DANA WHITLOCK · 9 REVISION EVENTS</div>
+    <div class="flag-value">ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d3l3t3d}</div>
+  </div>
+
+  <!-- HOW IT WAS HIDDEN -->
+  <div class="f-section">
+    <div class="f-section-head">
+      <span class="f-badge">TECHNIQUE</span>
+      <h2>How the flag was hidden</h2>
+    </div>
+    <p class="f-p">word/settings.xml had <code>w:trackChanges</code> display disabled — in Word's normal view, revision markup is invisible. But the XML is still there. Dana Whitlock spread nine flag fragments across two separate XML files, alternating between deleted text and review comments.</p>
+
+    <div class="hidden-grid">
+      <div class="hidden-card">
+        <div class="hc-head">
+          <div class="hc-icon del">DEL</div>
+          <span class="hc-title">word/document.xml</span>
+        </div>
+        <div class="hc-body">
+          Deleted text lives inside <code>w:del</code> elements. Word hides it when "Show Markup" is off. Each deletion carries the author's name and an exact UTC timestamp.
+          <div class="hc-xml"><span class="xml-tag">&lt;w:del</span> <span class="xml-attr">w:author</span>=<span class="xml-val">"Dana Whitlock"</span>
+         <span class="xml-attr">w:date</span>=<span class="xml-val">"2026-10-30T17:51:00Z"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;w:delText&gt;</span><span class="xml-txt">7</span><span class="xml-tag">&lt;/w:delText&gt;</span>
+<span class="xml-tag">&lt;/w:del&gt;</span></div>
+        </div>
+      </div>
+      <div class="hidden-card">
+        <div class="hc-head">
+          <div class="hc-icon cmt">CMT</div>
+          <span class="hc-title">word/comments.xml</span>
+        </div>
+        <div class="hc-body">
+          Review comments are stored in a separate XML file entirely. They are only visible in the Reviewing Pane — not in the main document body when markup is hidden.
+          <div class="hc-xml"><span class="xml-tag">&lt;w:comment</span> <span class="xml-attr">w:author</span>=<span class="xml-val">"Dana Whitlock"</span>
+           <span class="xml-attr">w:date</span>=<span class="xml-val">"2026-10-30T14:35:00Z"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;w:t&gt;</span><span class="xml-txt">ctf</span><span class="xml-tag">&lt;/w:t&gt;</span>
+<span class="xml-tag">&lt;/w:comment&gt;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEWER MAP -->
+  <div class="f-section">
+    <div class="f-section-head">
+      <span class="f-badge">SUSPECTS</span>
+      <h2>Who touched the document</h2>
+    </div>
+    <p class="f-p">Four authors appear in the revision history. Three left legitimate editorial comments. One used both XML layers as a dead-drop.</p>
+
+    <div class="reviewer-grid">
+      <div class="rev-row dana">
+        <span class="rev-name dana-name">Dana Whitlock</span>
+        <span class="rev-count count-sus">9 events · 2 files</span>
+        <span class="rev-note">5 deleted text fragments · 4 comments · flag author</span>
+      </div>
+      <div class="rev-row">
+        <span class="rev-name">Priya Raman</span>
+        <span class="rev-count count-legit">3 events</span>
+        <span class="rev-note">Editorial — p-value sourcing, deleted marketing language</span>
+      </div>
+      <div class="rev-row">
+        <span class="rev-name">Tom Ahearn</span>
+        <span class="rev-count count-legit">2 events</span>
+        <span class="rev-note">Editorial — safety listing version, deleted hedging phrase</span>
+      </div>
+      <div class="rev-row">
+        <span class="rev-name">Marcus Lindqvist</span>
+        <span class="rev-count count-legit">2 events</span>
+        <span class="rev-note">Editorial — IR page timing, deleted "preliminary"</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="f-section">
+    <div class="f-section-head">
+      <span class="f-badge">RECONSTRUCTION</span>
+      <h2>Nine fragments, sorted by timestamp</h2>
+    </div>
+    <p class="f-p">Every revision event carries a <code>w:date</code> attribute down to the second. Sorting Dana's events chronologically assembles the flag in order.</p>
+
+    <div class="timeline">
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 30<br>14:35 UTC</div>
+        <div class="tl-track"><div class="tl-node cmt-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-cmt">COMMENT</span>
+            <span class="tl-frag frag-cmt">ctf</span>
+          </div>
+          <div class="tl-loc">word/comments.xml · id=4</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-new">ctf</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 30<br>17:51 UTC</div>
+        <div class="tl-track"><div class="tl-node del-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-del">DELETED</span>
+            <span class="tl-frag frag-del">7</span>
+          </div>
+          <div class="tl-loc">word/document.xml · w:del</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf</span><span class="asm-new">7</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 30<br>20:37 UTC</div>
+        <div class="tl-track"><div class="tl-node del-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-del">DELETED</span>
+            <span class="tl-frag frag-del">{</span>
+          </div>
+          <div class="tl-loc">word/document.xml · w:del</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7</span><span class="asm-new">{</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 30<br>21:29 UTC</div>
+        <div class="tl-track"><div class="tl-node del-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-del">DELETED</span>
+            <span class="tl-frag frag-del">tr4ck3d_ch4</span>
+          </div>
+          <div class="tl-loc">word/document.xml · w:del</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{</span><span class="asm-new">tr4ck3d_ch4</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 30<br>22:22 UTC</div>
+        <div class="tl-track"><div class="tl-node cmt-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-cmt">COMMENT</span>
+            <span class="tl-frag frag-cmt">ng3s_r3m3mb3</span>
+          </div>
+          <div class="tl-loc">word/comments.xml · id=3</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{tr4ck3d_ch4</span><span class="asm-new">ng3s_r3m3mb3</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 31<br>01:11 UTC</div>
+        <div class="tl-track"><div class="tl-node cmt-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-cmt">COMMENT</span>
+            <span class="tl-frag frag-cmt">r_wh4t_y0u_d</span>
+          </div>
+          <div class="tl-loc">word/comments.xml · id=1</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{tr4ck3d_ch4ng3s_r3m3mb3</span><span class="asm-new">r_wh4t_y0u_d</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 31<br>02:20 UTC</div>
+        <div class="tl-track"><div class="tl-node del-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-del">DELETED</span>
+            <span class="tl-frag frag-del">3l</span>
+          </div>
+          <div class="tl-loc">word/document.xml · w:del</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d</span><span class="asm-new">3l</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 31<br>05:39 UTC</div>
+        <div class="tl-track"><div class="tl-node cmt-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-cmt">COMMENT</span>
+            <span class="tl-frag frag-cmt">3t</span>
+          </div>
+          <div class="tl-loc">word/comments.xml · id=6</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d3l</span><span class="asm-new">3t</span></div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-time">Oct 31<br>06:51 UTC</div>
+        <div class="tl-track"><div class="tl-node final-node"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <div class="tl-frag-row">
+            <span class="tl-type type-del">DELETED</span>
+            <span class="tl-frag frag-del">3d}</span>
+          </div>
+          <div class="tl-loc">word/document.xml · w:del</div>
+          <div class="assembly-bar"><span class="asm-label">assembled →</span><span class="asm-so-far">ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d3l3t</span><span class="asm-new">3d}</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FINAL ASSEMBLY CHIPS -->
+    <div class="assembly-final">
+      <div class="af-head">
+        <span>all 9 dana whitlock fragments · joined in timestamp order</span>
+        <span>document.xml + comments.xml</span>
+      </div>
+      <div class="af-body">
+        <span class="frag-chip chip-cmt">ctf</span>
+        <span class="frag-chip chip-del">7</span>
+        <span class="frag-chip chip-del">{</span>
+        <span class="frag-chip chip-del">tr4ck3d_ch4</span>
+        <span class="frag-chip chip-cmt">ng3s_r3m3mb3</span>
+        <span class="frag-chip chip-cmt">r_wh4t_y0u_d</span>
+        <span class="frag-chip chip-del">3l</span>
+        <span class="frag-chip chip-cmt">3t</span>
+        <span class="frag-chip chip-del">3d}</span>
+        <span class="chip-eq">=</span>
+        <span class="frag-chip chip-result">ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d3l3t3d}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMEDIATION -->
+  <div class="f-section">
+    <div class="f-section-head">
+      <span class="f-badge">REMEDIATION</span>
+      <h2>How to prevent this</h2>
+    </div>
+
+    <div class="fix-list">
+      <div class="fix-item">
+        <span class="fix-num">FIX 1</span>
+        <div>
+          <div class="fix-title">Accept comments and track changes before distribution</div>
+          <div class="fix-desc">Word's "Accept All Changes and Stop Tracking" permanently removes w:del, w:ins, and w:rPrChange nodes from document.xml. Comments must be deleted separately — accepting changes does not remove them. Run both before any external send.</div>
+        </div>
+      </div>
+      <div class="fix-item">
+        <span class="fix-num">FIX 2</span>
+        <div>
+          <div class="fix-title">Convert to PDF via a headless pipeline, not by opening Word</div>
+          <div class="fix-desc">A PDF rendered from the accepted-changes body contains no revision XML. It cannot carry w:del or comment nodes because those structures do not exist in the PDF format. Mandate PDF-only external distribution for embargoed documents.</div>
+        </div>
+      </div>
+      <div class="fix-item">
+        <span class="fix-num">FIX 3</span>
+        <div>
+          <div class="fix-title">Inspect the XML before sending any .docx</div>
+          <div class="fix-desc">grep -r "w:del\|w:comment\|w:ins" word/ inside the unzipped .docx reveals every hidden revision node. A one-line CI check on any outbound .docx can block files that still carry tracked changes or comments.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="f-footer">
+    <span>ORCA-2 · Word Track Changes covert channel · forensic writeup</span>
+    <span>ctf7{tr4ck3d_ch4ng3s_r3m3mb3r_wh4t_y0u_d3l3t3d}</span>
+  </footer>
+
+</div>
+</div>
+
+</body>
+</html>
+EOF
